@@ -1,37 +1,30 @@
 @echo off
+setlocal enabledelayedexpansion
+
 echo ========================================
 echo    ACROX LAUNCHER - AGGIORNAMENTO
 echo ========================================
 echo.
 
-:: Aggiorna la copia locale dal remoto
-echo Controllo aggiornamenti da GitHub...
-git pull origin main --rebase
+:: Chiedi la nuova versione
+set /p newver="Inserisci la nuova versione (es. 1.0.1): "
 
-if %errorlevel% neq 0 (
-    echo.
-    echo ⚠️ Si sono verificati conflitti durante il pull.
-    echo Risolvi i conflitti manualmente prima di continuare.
-    pause
-    exit /b
-)
+:: Aggiorna version.txt
+echo !newver! > version.txt
+echo Versione aggiornata in version.txt: !newver!
+echo.
 
-:: Controlla se ci sono modifiche da commitare
-git status --porcelain > temp_status.txt
-set /p changes=<temp_status.txt
-del temp_status.txt
+:: Aggiungi tutti i file modificati al commit
+git add .
 
-if "%changes%"=="" (
-    echo Nessuna modifica da caricare su GitHub.
-) else (
-    :: Commit e push automatico
-    git add .
-    git commit -m "Aggiornamento automatico"
-    git push origin main
-    echo.
-    echo ✅ Aggiornamento caricato su GitHub!
-    echo Gli utenti riceveranno la nuova versione.
-)
+:: Commit automatico
+git commit -m "Aggiornamento automatico versione !newver!"
 
+:: Push su GitHub
+git push origin main
+
+echo.
+echo ✅ Aggiornamento caricato su GitHub!
+echo Tutti gli utenti riceveranno la nuova versione quando apriranno il launcher.
 echo.
 pause
