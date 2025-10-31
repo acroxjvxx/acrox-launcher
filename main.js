@@ -2,7 +2,7 @@ const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const unzipper = require('unzipper');
+const unzipper = require('unzipper'); // <-- modulo corretto installato in dependencies
 
 let mainWindow;
 
@@ -22,9 +22,7 @@ function createWindow() {
 
   // Aprire link esterni nel browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http')) {
-      shell.openExternal(url);
-    }
+    if (url.startsWith('http')) shell.openExternal(url);
     return { action: 'deny' };
   });
 }
@@ -51,15 +49,13 @@ function checkForUpdates() {
           message: `È disponibile una nuova versione (${remoteVersion}). Vuoi aggiornare ora?`
         });
 
-        if (choice === 0) {
-          downloadUpdate(remoteVersion);
-        }
+        if (choice === 0) downloadUpdate(remoteVersion);
       }
     });
   }).on('error', (err) => console.error('Errore controllo aggiornamento:', err));
 }
 
-// Scarica aggiornamento con barra progresso
+// Scarica aggiornamento con barra di progresso
 function downloadUpdate(remoteVersion) {
   const zipUrl = 'https://github.com/acroxjvxx/acrox-launcher/archive/refs/heads/main.zip';
   const tempPath = path.join(app.getPath('temp'), 'update.zip');
@@ -83,7 +79,8 @@ function downloadUpdate(remoteVersion) {
 
     file.on('finish', () => {
       file.close();
-      // Estrarre ZIP (sovrascrive files locali)
+
+      // Estrae il ZIP e sovrascrive i file locali
       fs.createReadStream(tempPath)
         .pipe(unzipper.Extract({ path: __dirname }))
         .on('close', () => {
