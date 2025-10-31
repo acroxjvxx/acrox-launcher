@@ -1,58 +1,61 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 
-function updateFileFromGitHub(filename) {
-    return new Promise((resolve, reject) => {
-        const url = `https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/${filename}`;
-        const localPath = path.join(__dirname, filename);
+const localPath = path.join(app.getPath('userData'), 'index.html');
+const remoteUrl = 'https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/index.html';
 
-        https.get(url, (res) => {
-            if (res.statusCode !== 200) {
-                reject(new Error(`Errore aggiornamento ${filename}: ${res.statusCode}`));
-                return;
-            }
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                fs.writeFileSync(localPath, data, 'utf-8');
-                resolve(`${filename} aggiornato correttamente!`);
-            });
-        }).on('error', err => reject(err));
-    });
+function downloadFile(url, dest) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(`Errore ${res.statusCode} nel download`);
+        return;
+      }
+
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        fs.writeFileSync(dest, data, 'utf8');
+        resolve('File aggiornato correttamente');
+      });
+    }).on('error', reject);
+  });
 }
 
-async function updateFiles() {
-    const filesToUpdate = ['index.html']; // aggiungi altri file qui se vuoi
-    for (const file of filesToUpdate) {
-        try {
-            const message = await updateFileFromGitHub(file);
-            console.log(message);
-        } catch (err) {
-            console.error(err.message);
-        }
+async function ensureLatestFile() {
+  try {
+    console.log('Aggiornamento index.html da GitHub...');
+    await downloadFile(remoteUrl, localPath);
+    console.log('Aggiornamento completato!');
+  } catch (err) {
+    console.warn('Impossibile aggiornare da GitHub, uso versione locale:', err);
+    if (!fs.existsSync(localPath)) {
+      // Prima installazione → copia index.html di backup
+      fs.copyFileSync(path.join(__dirname, 'index.html'), localPath);
     }
+  }
 }
 
 function createWindow() {
-    const mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 720,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-        },
-    });
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    }
+  });
 
-    mainWindow.loadFile('index.html');
+  win.loadFile(localPath);
 }
 
 app.whenReady().then(async () => {
-    await updateFiles(); // aggiorna i file da GitHub
-    createWindow();
+  await ensureLatestFile();
+  createWindow();
 });
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') app.quit();
 });
