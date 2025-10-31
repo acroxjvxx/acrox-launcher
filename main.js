@@ -9,7 +9,7 @@ let mainWindow;
 const REPO_RAW = 'https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/';
 const LOCAL_VERSION_FILE = path.join(__dirname, 'version.txt');
 
-// Controlla aggiornamenti all’avvio
+// Controllo aggiornamenti
 async function checkForUpdate() {
     try {
         const res = await axios.get(REPO_RAW + 'version.txt');
@@ -20,6 +20,7 @@ async function checkForUpdate() {
             localVersion = fs.readFileSync(LOCAL_VERSION_FILE, 'utf8').trim();
         }
 
+        // Se la versione remota è più alta, mostra popup
         if (remoteVersion !== localVersion) {
             const choice = dialog.showMessageBoxSync(mainWindow, {
                 type: 'info',
@@ -46,7 +47,7 @@ async function checkForUpdate() {
     }
 }
 
-// Scarica i file aggiornati e mostra mini caricamento
+// Scarica solo i file HTML aggiornati dal repository
 async function updateFiles() {
     const filesToUpdate = [
         'index.html',
