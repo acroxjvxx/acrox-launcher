@@ -1,0 +1,35 @@
+{
+  "name": "acrox-site",
+  "version": "1.0.0",
+  "description": "ACROX Store Launcher",
+  "main": "main.js",
+  "author": "Acrox",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build-win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.13.3",
+    "fs-extra": "^11.3.2",
+    "axios": "^1.6.0"
+  },
+  "build": {
+    "appId": "com.acrox.store",
+    "productName": "ACROX Store",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
