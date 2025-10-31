@@ -1,52 +1,80 @@
-const { app, BrowserWindow, dialog } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const https = require('https');
+const { app, BrowserWindow } = require("electron");
+const path = require("path");
+const fs = require("fs");
+const https = require("https");
 
-const fileUrl = 'https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/index.html';
-const localFile = path.join(__dirname, 'index.html');
-
-function downloadFile(url, dest) {
+function updateFileFromGitHub(filename) {
   return new Promise((resolve, reject) => {
-    https.get(url, res => {
-      if (res.statusCode !== 200) return reject(`Errore HTTP ${res.statusCode}`);
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        fs.writeFileSync(dest, data, 'utf8');
+    const url = `https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/${filename}?t=${Date.now()}`;
+    const localPath = path.join(__dirname, filename);
+
+    console.log(`🔄 Controllo aggiornamento per ${filename}...`);
+
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`❌ Errore HTTP ${res.statusCode}`));
+        return;
+      }
+
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        let isNew = false;
+        if (fs.existsSync(localPath)) {
+          const oldData = fs.readFileSync(localPath, "utf-8");
+          if (oldData !== data) {
+            isNew = true;
+            fs.writeFileSync(localPath, data, "utf-8");
+          }
+        } else {
+          fs.writeFileSync(localPath, data, "utf-8");
+          isNew = true;
+        }
+
+        if (isNew) {
+          console.log(`✅ Aggiornato: ${filename}`);
+        } else {
+          console.log(`🟡 Nessuna modifica per: ${filename}`);
+        }
+
         resolve();
       });
-    }).on('error', reject);
+    }).on("error", (err) => {
+      reject(err);
+    });
   });
 }
 
-async function createWindow() {
+async function updateFiles() {
+  const files = ["index.html"]; // Aggiungi altri file se vuoi aggiornare più risorse
+  for (const f of files) {
+    try {
+      await updateFileFromGitHub(f);
+    } catch (err) {
+      console.error(`⚠️ Errore aggiornando ${f}:`, err.message);
+    }
+  }
+}
+
+function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 720,
-    webPreferences: { nodeIntegration: true, contextIsolation: false }
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
   });
 
-  try {
-    console.log('Aggiornamento index.html da GitHub...');
-    await downloadFile(fileUrl, localFile);
-    console.log('File aggiornato!');
-  } catch (err) {
-    console.warn('Errore durante l\'aggiornamento:', err);
-    dialog.showErrorBox('Errore aggiornamento', 'Non è stato possibile aggiornare index.html\n' + err);
-  }
-
-  console.log('Carico file da:', localFile);
-  win.loadFile(localFile);
-
-  // forza reload senza cache
-  win.webContents.once('did-finish-load', () => {
-    win.webContents.reloadIgnoringCache();
-  });
+  win.loadFile("index.html");
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  console.log("🚀 Avvio launcher...");
+  await updateFiles();
+  createWindow();
+});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });
