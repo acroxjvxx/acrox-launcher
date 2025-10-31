@@ -1,60 +1,51 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 
-const localPath = path.join(app.getPath('userData'), 'index.html');
-const remoteUrl = 'https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/index.html';
+const fileUrl = 'https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/index.html';
+const localFile = path.join(__dirname, 'index.html');
 
 function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        reject(`Errore ${res.statusCode} nel download`);
-        return;
-      }
-
+    https.get(url, res => {
+      if (res.statusCode !== 200) return reject(`Errore HTTP ${res.statusCode}`);
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         fs.writeFileSync(dest, data, 'utf8');
-        resolve('File aggiornato correttamente');
+        resolve();
       });
     }).on('error', reject);
   });
 }
 
-async function ensureLatestFile() {
-  try {
-    console.log('Aggiornamento index.html da GitHub...');
-    await downloadFile(remoteUrl, localPath);
-    console.log('Aggiornamento completato!');
-  } catch (err) {
-    console.warn('Impossibile aggiornare da GitHub, uso versione locale:', err);
-    if (!fs.existsSync(localPath)) {
-      // Prima installazione → copia index.html di backup
-      fs.copyFileSync(path.join(__dirname, 'index.html'), localPath);
-    }
-  }
-}
-
-function createWindow() {
+async function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 720,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    }
+    webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
 
-  win.loadFile(localPath);
+  try {
+    console.log('Aggiornamento index.html da GitHub...');
+    await downloadFile(fileUrl, localFile);
+    console.log('File aggiornato!');
+  } catch (err) {
+    console.warn('Errore durante l\'aggiornamento:', err);
+    dialog.showErrorBox('Errore aggiornamento', 'Non è stato possibile aggiornare index.html\n' + err);
+  }
+
+  console.log('Carico file da:', localFile);
+  win.loadFile(localFile);
+
+  // forza reload senza cache
+  win.webContents.once('did-finish-load', () => {
+    win.webContents.reloadIgnoringCache();
+  });
 }
 
-app.whenReady().then(async () => {
-  await ensureLatestFile();
-  createWindow();
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
