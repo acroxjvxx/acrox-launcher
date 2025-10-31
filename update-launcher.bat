@@ -14,18 +14,16 @@ if exist %versionFile% (
     set /p version=<%versionFile%
 )
 
-:: Incrementa automaticamente la versione (ultimo numero)
+:: Incrementa automaticamente il patch
 for /f "tokens=1-3 delims=." %%a in ("%version%") do (
     set major=%%a
     set minor=%%b
     set patch=%%c
 )
-
-:: Incrementa il patch
 set /a patch+=1
 set "newVersion=!major!.!minor!.!patch!"
 
-:: Aggiorna version.txt con la nuova versione
+:: Aggiorna version.txt
 echo !newVersion!> %versionFile%
 echo Versione aggiornata: !version! -> !newVersion!
 echo.
