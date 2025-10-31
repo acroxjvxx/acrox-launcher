@@ -4,16 +4,22 @@ echo    ACROX LAUNCHER - AGGIORNAMENTO LOCALE
 echo ========================================
 echo.
 
-:: Spostati nella cartella del progetto
-cd /d "%~dp0"
+:: Mostra tutti i file modificati
+git status
 
-:: Salva eventuali modifiche locali
+:: Aggiunge tutte le modifiche tranne i file ignorati
 git add -A
-git commit -m "Salvataggio modifiche locali" 2>nul
 
-:: Aggiorna dal repository principale
-git pull origin main
+:: Commit automatico
+git commit -m "Aggiornamento automatico locale"
+
+:: Pull remoto prima di push per evitare conflitti
+git pull origin main --rebase
+
+:: Push su GitHub
+git push origin main
 
 echo.
-echo ✅ Aggiornamento completato!
+echo ✅ Aggiornamento caricato su GitHub!
+echo Ora il launcher si aggiornera' al prossimo avvio.
 pause

@@ -1,55 +1,59 @@
 const { app, BrowserWindow, dialog } = require('electron');
-const { exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+const { exec } = require('child_process');
+const https = require('https');
 
 let mainWindow;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1024,
-    height: 768,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  });
-
-  mainWindow.loadFile('index.html');
-
-  mainWindow.on('closed', function () {
-    mainWindow = null;
-  });
-}
-
-// Funzione per aggiornare il launcher
-function updateLauncher() {
-  exec('update-launcher.bat', (error, stdout, stderr) => {
-    if (error) {
-      dialog.showErrorBox('Errore aggiornamento', error.message);
-      return;
-    }
-
-    // Mostra messaggio di conferma aggiornamento
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Aggiornamento completato',
-      message: 'Il launcher è stato aggiornato con successo!',
+    mainWindow = new BrowserWindow({
+        width: 1200,
+        height: 800,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false
+        }
     });
 
-    console.log(stdout);
-  });
+    mainWindow.loadFile('index.html');
+
+    // Controlla aggiornamenti all'avvio
+    checkUpdate();
 }
 
-app.on('ready', createWindow);
+app.whenReady().then(createWindow);
 
-// Optional: aggiungi un menu o pulsante nel renderer per richiamare updateLauncher()
-app.on('activate', function () {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit();
-});
+// Funzione per controllare aggiornamenti
+function checkUpdate() {
+    let localVersion = fs.readFileSync(path.join(__dirname, 'version.txt'), 'utf-8').trim();
 
-// Esporta la funzione se vuoi richiamarla dal renderer
-module.exports = { updateLauncher };
+    https.get('https://raw.githubusercontent.com/acroxjvxx/acrox-launcher/main/version.txt', (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+            let remoteVersion = data.trim();
+            if (remoteVersion !== localVersion) {
+                dialog.showMessageBox({
+                    type: 'info',
+                    title: 'Aggiornamento disponibile',
+                    message: `Nuova versione disponibile: ${remoteVersion}\nVuoi aggiornare ora?`,
+                    buttons: ['Aggiorna', 'Annulla']
+                }).then(result => {
+                    if (result.response === 0) { // Se clicca Aggiorna
+                        const batPath = path.join(__dirname, 'update-launcher.bat');
+                        exec(`"${batPath}"`, (error, stdout, stderr) => {
+                            if (error) console.error(error);
+                        });
+                    }
+                });
+            }
+        });
+    }).on('error', (err) => {
+        console.error('Errore controllo aggiornamento:', err);
+    });
+}
